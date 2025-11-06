@@ -1,2 +1,7 @@
 .idea
 frontend/node_modules
+# Ignore Terraform cache and state
+.terraform/
+*.tfstate
+*.tfstate.*
+
