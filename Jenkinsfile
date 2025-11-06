@@ -7,14 +7,6 @@ pipeline {
     }
 
     stages {
-
-        stage('Checkout') {
-            steps {
-                echo "📦 Checking out source code from your repo..."
-                git branch: 'main', url: 'https://github.com/VaishnaviGunipati/devops-fullstack-app.git'
-            }
-        }
-
         stage('Build Docker Images') {
             steps {
                 echo "🐳 Building Docker images for frontend and backend..."
@@ -47,18 +39,18 @@ pipeline {
     }
 
     post {
-        success {
-            echo "✅ Pipeline executed successfully! App deployed on K3s."
-        }
-        failure {
-            echo "❌ Pipeline failed. Check console output for details."
-        }
         always {
             echo "🧹 Cleaning up local test containers..."
             sh '''
             docker rm -f frontend-test || true
             docker rm -f backend-test || true
             '''
+        }
+        success {
+            echo "✅ Pipeline executed successfully! App deployed on K3s."
+        }
+        failure {
+            echo "❌ Pipeline failed. Check console output for details."
         }
     }
 }
