@@ -2,23 +2,22 @@ pipeline {
     agent any
 
     environment {
-        AWS_DEFAULT_REGION = "us-east-1"
         FRONTEND_IMAGE = "sample-frontend"
         BACKEND_IMAGE = "sample-backend"
-        FRONTEND_ECR = "your-aws-account-id.dkr.ecr.us-east-1.amazonaws.com/frontend-repo"
-        BACKEND_ECR = "your-aws-account-id.dkr.ecr.us-east-1.amazonaws.com/backend-repo"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/TechVerito-Software-Solutions-LLP/devops-fullstack-app.git'
+                echo "📦 Checking out source code from your repo..."
+                git branch: 'main', url: 'https://github.com/VaishnaviGunipati/devops-fullstack-app.git'
             }
         }
 
         stage('Build Docker Images') {
             steps {
+                echo "🐳 Building Docker images for frontend and backend..."
                 sh '''
                 docker build -t $FRONTEND_IMAGE ./frontend
                 docker build -t $BACKEND_IMAGE ./backend
@@ -26,20 +25,19 @@ pipeline {
             }
         }
 
-        stage('Tag & Push to ECR') {
+        stage('Run Containers for Testing') {
             steps {
+                echo "🧪 Running both containers locally for quick test..."
                 sh '''
-                aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $(echo $FRONTEND_ECR | cut -d'/' -f1)
-                docker tag $FRONTEND_IMAGE:latest $FRONTEND_ECR:latest
-                docker tag $BACKEND_IMAGE:latest $BACKEND_ECR:latest
-                docker push $FRONTEND_ECR:latest
-                docker push $BACKEND_ECR:latest
+                docker run -d -p 80:80 --name frontend-test $FRONTEND_IMAGE
+                docker run -d -p 8080:8080 --name backend-test $BACKEND_IMAGE
                 '''
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy to Kubernetes (K3s)') {
             steps {
+                echo "🚀 Deploying frontend and backend to K3s cluster..."
                 sh '''
                 kubectl apply -f k8s/backend-deployment.yaml
                 kubectl apply -f k8s/frontend-deployment.yaml
@@ -50,10 +48,17 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment completed successfully!"
+            echo "✅ Pipeline executed successfully! App deployed on K3s."
         }
         failure {
-            echo "❌ Build or Deployment failed."
+            echo "❌ Pipeline failed. Check console output for details."
+        }
+        always {
+            echo "🧹 Cleaning up local test containers..."
+            sh '''
+            docker rm -f frontend-test || true
+            docker rm -f backend-test || true
+            '''
         }
     }
 }
